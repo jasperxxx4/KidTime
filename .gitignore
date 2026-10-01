@@ -1,0 +1,32 @@
+# Private/local configuration
+/etc-kidtime/config
+/etc-kidtime/be6500.pass
+/etc-kidtime/kidblock-domains.txt
+
+# Local/private project material
+key_bak/
+traffic-samples/
+archive/
+release-staging/
+
+# Captures / logs / temporary files
+*.pcap
+*.pcapng
+*.log
+*.tmp
+*.bak
+*.bak-*
+*.tar.gz
+*.zip
+
+# Secrets / keys
+*.key
+*.pem
+*.pass
+*.token
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
