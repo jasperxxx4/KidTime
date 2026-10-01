@@ -1,0 +1,426 @@
+#!/bin/sh
+
+CONFIG="/etc/kidtime/config"
+STATE_DIR="/tmp/kidtime"
+STATE="$STATE_DIR/state"
+CONTROL="/etc/kidtime/router-adapters/be6500_control.sh"
+
+
+. "$CONFIG"
+mkdir -p "$STATE_DIR"
+
+json_escape() {
+    printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
+get_today_rules() {
+    DOW=$(date +%u)
+
+    case "$DOW" in
+        1)
+            START="$MON_START"
+            END="$MON_END"
+            LIMIT_MIN="$MON_LIMIT"
+            ;;
+        2)
+            START="$TUE_START"
+            END="$TUE_END"
+            LIMIT_MIN="$TUE_LIMIT"
+            ;;
+        3)
+            START="$WED_START"
+            END="$WED_END"
+            LIMIT_MIN="$WED_LIMIT"
+            ;;
+        4)
+            START="$THU_START"
+            END="$THU_END"
+            LIMIT_MIN="$THU_LIMIT"
+            ;;
+        5)
+            START="$FRI_START"
+            END="$FRI_END"
+            LIMIT_MIN="$FRI_LIMIT"
+            ;;
+        6)
+            START="$SAT_START"
+            END="$SAT_END"
+            LIMIT_MIN="$SAT_LIMIT"
+            ;;
+        7)
+            START="$SUN_START"
+            END="$SUN_END"
+            LIMIT_MIN="$SUN_LIMIT"
+            ;;
+    esac
+
+    LIMIT_SECONDS=$((LIMIT_MIN * 60))
+}
+
+init_state() {
+    TODAY=$(date +%F)
+
+    if [ ! -f "$STATE" ]; then
+        cat > "$STATE" <<STATEEOF
+DATE=$TODAY
+USED_SECONDS=0
+BONUS_SECONDS=0
+IDLE_SECONDS=0
+LAST_TICK_TS=0
+LOW_TRAFFIC_HITS=0
+STATUS=IDLE
+ROUTER_STATE=UNKNOWN
+STATEEOF
+        return
+    fi
+
+    . "$STATE"
+
+    if [ "$DATE" != "$TODAY" ]; then
+        cat > "$STATE" <<STATEEOF
+DATE=$TODAY
+USED_SECONDS=0
+BONUS_SECONDS=0
+IDLE_SECONDS=0
+LAST_TICK_TS=0
+LOW_TRAFFIC_HITS=0
+STATUS=IDLE
+ROUTER_STATE=UNKNOWN
+STATEEOF
+    fi
+}
+
+save_state() {
+    cat > "$STATE" <<STATEEOF
+DATE=$DATE
+USED_SECONDS=$USED_SECONDS
+BONUS_SECONDS=$BONUS_SECONDS
+LOW_TRAFFIC_HITS=$LOW_TRAFFIC_HITS
+IDLE_SECONDS=$IDLE_SECONDS
+LAST_TICK_TS=$LAST_TICK_TS
+STATUS=$STATUS
+ROUTER_STATE=$ROUTER_STATE
+STATEEOF
+}
+
+in_window() {
+    NOW=$(date +%H%M)
+    START_N=$(echo "$START" | tr -d ':')
+    END_N=$(echo "$END" | tr -d ':')
+
+    [ "$NOW" -ge "$START_N" ] && [ "$NOW" -lt "$END_N" ]
+}
+
+set_router() {
+    WANT="$1"
+
+    [ "$ROUTER_STATE" = "$WANT" ] && return 0
+
+    if [ "$WANT" = "ALLOW" ]; then
+        "$CONTROL" allow >/dev/null 2>&1 || return 1
+    else
+        "$CONTROL" block >/dev/null 2>&1 || return 1
+    fi
+
+    ROUTER_STATE="$WANT"
+}
+
+has_traffic() {
+    TRAFFIC_STATE="/tmp/kidtime_traffic_state"
+
+    UP=$(nft list counter inet kidtime kid_up 2>/dev/null | awk '/packets/ {for(i=1;i<=NF;i++) if($i=="bytes") print $(i+1)}')
+    DOWN=$(nft list counter inet kidtime kid_down 2>/dev/null | awk '/packets/ {for(i=1;i<=NF;i++) if($i=="bytes") print $(i+1)}')
+
+    [ -n "$UP" ] && [ -n "$DOWN" ] || return 1
+
+    NOW_TS=$(date +%s)
+
+    if [ -f "$TRAFFIC_STATE" ]; then
+        . "$TRAFFIC_STATE"
+    fi
+
+    LAST_UP=${LAST_UP:-$UP}
+    LAST_DOWN=${LAST_DOWN:-$DOWN}
+    LAST_TS=${LAST_TS:-$NOW_TS}
+    HISTORY=${HISTORY:-00000}
+
+    GAP=$((NOW_TS - LAST_TS))
+    if [ "$GAP" -gt 12 ]; then
+        HISTORY="00000"
+        LAST_UP=$UP
+        LAST_DOWN=$DOWN
+    fi
+
+    if [ "$UP" -gt "$LAST_UP" ] || [ "$DOWN" -gt "$LAST_DOWN" ]; then
+        HIT=1
+    else
+        HIT=0
+    fi
+
+    HISTORY="${HISTORY#?}${HIT}"
+
+    cat > "$TRAFFIC_STATE" <<STATEEOF
+LAST_UP=$UP
+LAST_DOWN=$DOWN
+LAST_TS=$NOW_TS
+HISTORY=$HISTORY
+CURRENT_HIT=$HIT
+STATEEOF
+
+    HITS=$(echo "$HISTORY" | tr -cd '1' | wc -c)
+    [ "$HITS" -ge 3 ]
+}
+
+tick() {
+    init_state
+    . "$STATE"
+    get_today_rules
+
+    # Master switch: management disabled
+    if [ -f /etc/kidtime/master.disabled ]; then
+        STATUS="MANAGEMENT_OFF"
+        IDLE_SECONDS=0
+        LOW_TRAFFIC_HITS=0
+        set_router ALLOW
+        save_state
+        return
+    fi
+
+    NOW_TICK_TS=$(date +%s)
+    LAST_TICK_TS=${LAST_TICK_TS:-0}
+
+    if [ "$LAST_TICK_TS" -gt 0 ]; then
+        ELAPSED_SECONDS=$((NOW_TICK_TS - LAST_TICK_TS))
+    else
+        ELAPSED_SECONDS=$CHECK_INTERVAL
+    fi
+
+    # 防止重启、停服务或系统时间变化后一次性补计很长时间
+    if [ "$ELAPSED_SECONDS" -le 0 ] || [ "$ELAPSED_SECONDS" -gt 12 ]; then
+        ELAPSED_SECONDS=$CHECK_INTERVAL
+    fi
+
+    LAST_TICK_TS=$NOW_TICK_TS
+
+    TOTAL_ALLOWED=$((LIMIT_SECONDS + BONUS_SECONDS))
+
+    if ! in_window; then
+        STATUS="OUT_OF_WINDOW"
+        IDLE_SECONDS=0
+LOW_TRAFFIC_HITS=0
+        set_router BLOCK
+        save_state
+        return
+    fi
+
+    if [ "$USED_SECONDS" -ge "$TOTAL_ALLOWED" ]; then
+        STATUS="LIMIT_REACHED"
+        IDLE_SECONDS=0
+LOW_TRAFFIC_HITS=0
+        set_router BLOCK
+        save_state
+        return
+    fi
+
+    set_router ALLOW
+
+    # 每轮先更新一次3/5历史，同时取得当前6秒是否有真实流量
+    if has_traffic; then
+        TRAFFIC_OK=1
+    else
+        TRAFFIC_OK=0
+    fi
+
+    CURRENT_HIT=0
+    [ -f /tmp/kidtime_traffic_state ] && . /tmp/kidtime_traffic_state
+
+    if [ "$STATUS" = "ACTIVE" ]; then
+        if [ "$CURRENT_HIT" = "1" ]; then
+            IDLE_SECONDS=0
+            USED_SECONDS=$((USED_SECONDS + ELAPSED_SECONDS))
+        else
+            IDLE_SECONDS=$((IDLE_SECONDS + ELAPSED_SECONDS))
+
+            if [ "$IDLE_SECONDS" -lt "$IDLE_TIMEOUT" ]; then
+                USED_SECONDS=$((USED_SECONDS + ELAPSED_SECONDS))
+            else
+                STATUS="IDLE"
+                IDLE_SECONDS=0
+            fi
+        fi
+    else
+        if [ "$TRAFFIC_OK" = "1" ]; then
+            STATUS="ACTIVE"
+            IDLE_SECONDS=0
+            USED_SECONDS=$((USED_SECONDS + ELAPSED_SECONDS))
+        else
+            STATUS="IDLE"
+            IDLE_SECONDS=0
+        fi
+    fi
+    if [ "$USED_SECONDS" -ge "$TOTAL_ALLOWED" ]; then
+        USED_SECONDS="$TOTAL_ALLOWED"
+        STATUS="LIMIT_REACHED"
+        set_router BLOCK
+    fi
+
+    save_state
+}
+
+show_status() {
+    init_state
+    . "$STATE"
+    get_today_rules
+
+
+    TOTAL_ALLOWED=$((LIMIT_SECONDS + BONUS_SECONDS))
+    REMAIN=$((TOTAL_ALLOWED - USED_SECONDS))
+    [ "$REMAIN" -lt 0 ] && REMAIN=0
+
+    echo "KidTime - $DEVICE_NAME"
+    echo "查询时间: $(date "+%F %T")"
+    echo "日期: $DATE"
+    echo "允许时段: $START-$END"
+    echo "今日额度: $((TOTAL_ALLOWED / 60)) 分钟"
+    echo "已使用: $((USED_SECONDS / 60))分$((USED_SECONDS % 60))秒"
+    echo "剩余: $((REMAIN / 60))分$((REMAIN % 60))秒"
+    echo "状态: $STATUS"
+    echo "路由控制: $ROUTER_STATE"
+}
+
+show_status_json() {
+    init_state
+    . "$STATE"
+    get_today_rules
+
+    TOTAL_ALLOWED=$((LIMIT_SECONDS + BONUS_SECONDS))
+    REMAIN=$((TOTAL_ALLOWED - USED_SECONDS))
+    [ "$REMAIN" -lt 0 ] && REMAIN=0
+
+    case "$STATUS" in
+        ACTIVE)
+            ACTIVITY_STATE="ACTIVE"
+            RESTRICTION_REASON="NONE"
+            ;;
+        IDLE)
+            ACTIVITY_STATE="IDLE"
+            RESTRICTION_REASON="NONE"
+            ;;
+        OUT_OF_WINDOW)
+            ACTIVITY_STATE="IDLE"
+            RESTRICTION_REASON="OUT_OF_WINDOW"
+            ;;
+        LIMIT_REACHED)
+            ACTIVITY_STATE="IDLE"
+            RESTRICTION_REASON="LIMIT_REACHED"
+            ;;
+        MANAGEMENT_OFF)
+            ACTIVITY_STATE="IDLE"
+            RESTRICTION_REASON="MANAGEMENT_OFF"
+            ;;
+        *)
+            ACTIVITY_STATE="UNKNOWN"
+            RESTRICTION_REASON="UNKNOWN"
+            ;;
+    esac
+
+    printf '{'
+    printf '"device":"%s",' "$(json_escape "$DEVICE_NAME")"
+    printf '"date":"%s",' "$(json_escape "$DATE")"
+    printf '"query_time":"%s",' "$(date "+%F %T")"
+    printf '"window_start":"%s",' "$(json_escape "$START")"
+    printf '"window_end":"%s",' "$(json_escape "$END")"
+    printf '"limit_seconds":%s,' "$TOTAL_ALLOWED"
+    printf '"used_seconds":%s,' "$USED_SECONDS"
+    printf '"remaining_seconds":%s,' "$REMAIN"
+    printf '"activity_state":"%s",' "$ACTIVITY_STATE"
+    printf '"access_state":"%s",' "$ROUTER_STATE"
+    printf '"restriction_reason":"%s"' "$RESTRICTION_REASON"
+    printf '}\n'
+}
+
+add_time() {
+    MIN="$1"
+
+    case "$MIN" in
+        ''|*[!0-9]*)
+            echo "Usage: kidtime add <minutes>"
+            exit 1
+            ;;
+    esac
+
+    if [ "$MIN" -lt 1 ] || [ "$MIN" -gt 1440 ]; then
+        echo "ERROR: minutes must be between 1 and 1440" >&2
+        exit 1
+    fi
+
+    init_state
+    . "$STATE"
+
+    BONUS_SECONDS=$((BONUS_SECONDS + MIN * 60))
+
+    ROUTER_STATE=UNKNOWN
+    save_state
+    cp "$STATE" /etc/kidtime/state
+    chmod 600 /etc/kidtime/state
+    tick
+    echo "今天增加 ${MIN} 分钟。"
+}
+
+master_off() {
+    touch /etc/kidtime/master.disabled
+    /usr/bin/kidblock status >/dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        /usr/bin/kidblock status 2>/dev/null | grep -qiE "ON|enabled" && touch /etc/kidtime/kidblock_was_enabled
+    fi
+    /usr/bin/kidblock off >/dev/null 2>&1
+    tick
+}
+
+master_on() {
+    rm -f /etc/kidtime/master.disabled
+    if [ -f /etc/kidtime/kidblock_was_enabled ]; then
+        /usr/bin/kidblock on >/dev/null 2>&1
+        rm -f /etc/kidtime/kidblock_was_enabled
+    fi
+    tick
+}
+
+master_status() {
+    if [ -f /etc/kidtime/master.disabled ]; then
+        echo OFF
+    else
+        echo ON
+    fi
+}
+
+case "$1" in
+    tick)
+        tick
+        ;;
+    status)
+        show_status
+        ;;
+    master-on)
+        master_on
+        ;;
+
+    master-off)
+        master_off
+        ;;
+
+    master-status)
+        master_status
+        ;;
+
+	status-json)
+        show_status_json
+        ;;	
+    add)
+        add_time "$2"
+        ;;
+    *)
+        echo "Usage: kidtime {status|status-json|tick|add <minutes>|master-on|master-off|master-status}"
+        exit 1
+        ;;
+esac

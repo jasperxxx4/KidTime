@@ -1,0 +1,41 @@
+# Copy this file to /etc/kidtime/config, replace every example value, then chmod 600.
+
+DEVICE_NAME='Child device'
+DEVICE_IP='192.0.2.20'
+
+# Core polling and ACTIVE -> IDLE delay, in seconds.
+CHECK_INTERVAL=6
+IDLE_TIMEOUT=24
+
+MON_START='08:00'
+MON_END='21:00'
+MON_LIMIT=60
+TUE_START='08:00'
+TUE_END='21:00'
+TUE_LIMIT=60
+WED_START='08:00'
+WED_END='21:00'
+WED_LIMIT=60
+THU_START='08:00'
+THU_END='21:00'
+THU_LIMIT=60
+FRI_START='08:00'
+FRI_END='21:00'
+FRI_LIMIT=60
+SAT_START='08:00'
+SAT_END='21:00'
+SAT_LIMIT=90
+SUN_START='08:00'
+SUN_END='21:00'
+SUN_LIMIT=90
+
+# Documentation-only addresses and identifiers: replace before deployment.
+BE6500_ROUTER='192.0.2.1'
+BE6500_DEVICE_ID='00:00:00:00:00:00'
+BE6500_MAC_24G='00:00:00:00:00:00'
+BE6500_MAC_5G='00:00:00:00:00:00'
+BE6500_PASSFILE='/etc/kidtime/be6500.pass'
+
+# BE6500_KEY is a protocol constant for supported firmware, not a user secret.
+# Override it only when your router firmware requires a different value.
+# BE6500_KEY='replace-if-required'

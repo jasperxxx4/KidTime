@@ -1,0 +1,4 @@
+config include 'kidtime'
+	option type 'script'
+	option path '/etc/kidtime/firewall.sh'
+

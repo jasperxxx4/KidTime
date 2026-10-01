@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KidTime</title>
+
+<style>
+:root {
+    --bg: #f5f7fb;
+    --card: #ffffff;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --primary: #2563eb;
+    --green-bg: #dcfce7;
+    --green-text: #166534;
+    --red-bg: #fee2e2;
+    --red-text: #991b1b;
+    --orange-bg: #ffedd5;
+    --orange-text: #9a3412;
+    --gray-bg: #e5e7eb;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+}
+
+.container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 18px;
+}
+
+h1 {
+    margin: 0 0 6px;
+    font-size: 30px;
+}
+
+.subtitle {
+    color: var(--muted);
+    margin-bottom: 22px;
+}
+
+.card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px;
+    margin-bottom: 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.04);
+}
+
+.card-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 18px;
+}
+
+.status-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.status-item {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.status-label {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 600;
+}
+
+.badge {
+    padding: 9px 16px;
+    border-radius: 999px;
+    font-weight: 700;
+    background: var(--gray-bg);
+}
+
+.badge.green {
+    background: var(--green-bg);
+    color: var(--green-text);
+}
+
+.badge.red {
+    background: var(--red-bg);
+    color: var(--red-text);
+}
+
+.badge.orange {
+    background: var(--orange-bg);
+    color: var(--orange-text);
+}
+
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+}
+
+.stat {
+    background: #f9fafb;
+    border-radius: 12px;
+    padding: 15px;
+}
+
+.stat-label {
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+
+.stat-value {
+    font-size: 21px;
+    font-weight: 700;
+}
+
+.buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+button {
+    border: 0;
+    border-radius: 10px;
+    padding: 11px 16px;
+    font-size: 15px;
+    cursor: pointer;
+}
+
+button.primary {
+    background: var(--primary);
+    color: white;
+}
+
+button.secondary {
+    background: #eef2ff;
+    color: #1e40af;
+}
+
+button.danger {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+button.gray {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.days {
+    display: grid;
+    gap: 12px;
+}
+
+.day-row {
+    display: grid;
+    grid-template-columns: 90px 1fr 1fr 1fr;
+    gap: 12px;
+    align-items: end;
+}
+
+.day-name {
+    font-weight: 700;
+    font-size: 16px;
+    padding-bottom: 12px;
+}
+
+input {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 10px;
+    font-size: 15px;
+    background: white;
+}
+
+.domain-add {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.domain-list {
+    margin-top: 16px;
+}
+
+.domain-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.domain-name {
+    word-break: break-all;
+}
+
+.message {
+    margin-top: 12px;
+    min-height: 20px;
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.small {
+    font-size: 13px;
+    color: var(--muted);
+}
+
+@media (max-width: 700px) {
+    .status-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .day-row {
+        grid-template-columns: 1fr 1fr;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 14px;
+    }
+
+    .day-name {
+        grid-column: 1 / -1;
+        padding-bottom: 0;
+    }
+
+    .domain-add {
+        flex-direction: column;
+    }
+}
+
+.status-row {
+    display: grid;
+    grid-template-columns: repeat(3, 110px);
+    gap: 16px;
+    align-items: start;
+}
+
+.status-item {
+    width: 110px;
+    align-items: center;
+}
+
+.status-label {
+    width: 100%;
+    text-align: center;
+}
+
+.status-item .badge {
+    width: 110px;
+    text-align: center;
+}
+
+@media (max-width: 700px) {
+    .status-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        width: 100%;
+    }
+
+    .status-item {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .status-item .badge {
+        width: 100%;
+        padding: 9px 6px;
+        font-size: 14px;
+        white-space: nowrap;
+    }
+
+    .status-label {
+        font-size: 12px;
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 700px) {
+    #reasonBadge {
+        font-size: 11px;
+        padding-left: 3px;
+        padding-right: 3px;
+        letter-spacing: -0.2px;
+    }
+}
+
+@media (max-width: 700px) {
+    #reasonBadge {
+        line-height: 1.05;
+        white-space: normal;
+        text-align: center;
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 700px) {
+    .status-item .badge {
+        height: 66px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        line-height: 1.05;
+        text-align: center;
+        padding: 6px;
+        white-space: normal;
+    }
+
+    #reasonBadge {
+        font-size: 13px;
+        line-height: 1.05;
+        letter-spacing: 0;
+    }
+}
+
+.domain-item .danger {
+    width: 84px;
+    min-width: 84px;
+    white-space: nowrap;
+    text-align: center;
+}
+
+.badge.active-green {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.badge.allow-green {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.badge.none-green {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.buttons button {
+    min-width: 112px;
+}
+
+.master-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.master-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 700px) {
+    .master-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .master-controls {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    #masterStatus {
+        grid-column: 1 / -1;
+        text-align: center;
+    }
+
+    .master-controls button {
+        width: 100%;
+    }
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+    <div class="small" style="margin-bottom:10px;color:#2563eb;font-weight:600">演示模式 · 不连接路由器，所有数据均为示例</div>
+
+    <h1>KidTime</h1>
+    <div class="subtitle" id="deviceName">正在加载...</div>
+
+    <div class="card">
+        <div class="master-row">
+            <div>
+                <div class="card-title" style="margin-bottom:4px">KidTime 管理</div>
+                <div class="small">暂停后停止计时，并保持设备联网</div>
+            </div>
+
+            <div class="master-controls">
+                <span id="masterStatus" class="badge">--</span>
+                <button id="masterOnBtn" class="gray" onclick="masterOn()">开启管理</button>
+                <button id="masterOffBtn" class="gray" onclick="masterOff()">暂停管理</button>
+            </div>
+        </div>
+        <div class="message" id="masterMessage"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">当前状态</div>
+
+        <div class="status-row">
+            <div class="status-item">
+                <div class="status-label">设备活动</div>
+                <div id="activityBadge" class="badge">--</div>
+            </div>
+
+            <div class="status-item">
+                <div class="status-label">联网权限</div>
+                <div id="accessBadge" class="badge">--</div>
+            </div>
+
+            <div class="status-item">
+                <div class="status-label">限制原因</div>
+                <div id="reasonBadge" class="badge">--</div>
+            </div>
+        </div>
+
+        <div class="status-grid">
+            <div class="stat">
+                <div class="stat-label">今日已使用</div>
+                <div class="stat-value" id="usedTime">--</div>
+            </div>
+
+            <div class="stat">
+                <div class="stat-label">今日剩余</div>
+                <div class="stat-value" id="remainingTime">--</div>
+            </div>
+
+            <div class="stat">
+                <div class="stat-label">今日额度</div>
+                <div class="stat-value" id="limitTime">--</div>
+            </div>
+
+            <div class="stat">
+                <div class="stat-label">允许时段</div>
+                <div class="stat-value" id="windowTime">--</div>
+            </div>
+        </div>
+
+        <div class="small" style="margin-top:14px">
+            最后更新：<span id="queryTime">--</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">临时加时</div>
+
+        <div class="buttons">
+            <button class="secondary" onclick="addTime(10)">+10 分钟</button>
+            <button class="secondary" onclick="addTime(15)">+15 分钟</button>
+            <button class="secondary" onclick="addTime(30)">+30 分钟</button>
+            <button class="gray" onclick="customAddTime()">自定义</button>
+        </div>
+
+        <div class="message" id="addMessage"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">每周规则</div>
+
+        <div class="days" id="days"></div>
+
+        <div style="margin-top:16px">
+            <button class="primary" onclick="saveConfig()">保存规则</button>
+        </div>
+
+        <div class="message" id="configMessage"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">
+            KidBlock
+            <span id="kidblockStatus" class="small"></span>
+        </div>
+
+        <div class="buttons">
+            <button id="kidblockOnBtn" class="primary" onclick="kidblockOn()">开启</button>
+            <button id="kidblockOffBtn" class="gray" onclick="kidblockOff()">关闭</button>
+        </div>
+
+        <div class="domain-list" id="domainList"></div>
+
+        <div class="domain-add">
+            <input id="newDomain" placeholder="输入域名，例如 video.example.com">
+            <button class="primary" onclick="addDomain()">添加</button>
+        </div>
+
+        <div class="message" id="kidblockMessage"></div>
+    </div>
+
+</div>
+
+<script>
+const API = "/cgi-bin/kidtime-api";
+
+const DAYS = [
+    ["MON", "周一"],
+    ["TUE", "周二"],
+    ["WED", "周三"],
+    ["THU", "周四"],
+    ["FRI", "周五"],
+    ["SAT", "周六"],
+    ["SUN", "周日"]
+];
+
+function secondsText(sec) {
+    sec = Number(sec || 0);
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return s === 0 ? `${m} 分钟` : `${m}分${s}秒`;
+}
+
+const MOCK = {
+    masterEnabled: true,
+    kidblockEnabled: true,
+    bonusSeconds: 0,
+    usedSeconds: 1542,
+    config: {
+        MON_START: "17:45", MON_END: "22:15", MON_LIMIT: "30",
+        TUE_START: "17:45", TUE_END: "22:15", TUE_LIMIT: "30",
+        WED_START: "17:45", WED_END: "22:15", WED_LIMIT: "30",
+        THU_START: "09:00", THU_END: "22:30", THU_LIMIT: "60",
+        FRI_START: "18:00", FRI_END: "23:15", FRI_LIMIT: "60",
+        SAT_START: "08:00", SAT_END: "23:15", SAT_LIMIT: "60",
+        SUN_START: "08:00", SUN_END: "22:15", SUN_LIMIT: "60"
+    },
+    domains: [
+        "video.example.com",
+        "shorts.example.net",
+        "live.example.org"
+    ]
+};
+
+function mockTodayKey() {
+    const keys = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+    return keys[new Date().getDay()];
+}
+
+async function api(params) {
+    const action = params.action;
+
+    if (action === "master-status") return { ok: true, enabled: MOCK.masterEnabled };
+    if (action === "master-on") { MOCK.masterEnabled = true; return { ok: true, enabled: true }; }
+    if (action === "master-off") { MOCK.masterEnabled = false; return { ok: true, enabled: false }; }
+
+    if (action === "status") {
+        const key = mockTodayKey();
+        const base = Number(MOCK.config[`${key}_LIMIT`] || 60) * 60;
+        const limit = base + MOCK.bonusSeconds;
+        const remaining = Math.max(0, limit - MOCK.usedSeconds);
+        const now = new Date();
+        const pad = n => String(n).padStart(2, "0");
+        const query = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+        return {
+            device: "Demo_iPad",
+            query_time: query,
+            window_start: MOCK.config[`${key}_START`],
+            window_end: MOCK.config[`${key}_END`],
+            limit_seconds: limit,
+            used_seconds: MOCK.usedSeconds,
+            remaining_seconds: remaining,
+            activity_state: MOCK.masterEnabled ? "IDLE" : "IDLE",
+            access_state: "ALLOW",
+            restriction_reason: MOCK.masterEnabled ? "NONE" : "MANAGEMENT_OFF"
+        };
+    }
+
+    if (action === "add-time") {
+        const n = Number(params.minutes);
+        if (!Number.isInteger(n) || n < 1 || n > 1440) return { ok:false, error:"invalid_minutes" };
+        MOCK.bonusSeconds += n * 60;
+        return { ok:true };
+    }
+
+    if (action === "config") return { ok:true, ...MOCK.config };
+    if (action === "save-config") {
+        for (const [key] of DAYS) {
+            MOCK.config[`${key}_START`] = params[`${key}_START`];
+            MOCK.config[`${key}_END`] = params[`${key}_END`];
+            MOCK.config[`${key}_LIMIT`] = params[`${key}_LIMIT`];
+        }
+        return { ok:true };
+    }
+
+    if (action === "kidblock-status") return { ok:true, enabled: MOCK.kidblockEnabled };
+    if (action === "kidblock-on") { MOCK.kidblockEnabled = true; return { ok:true, enabled:true }; }
+    if (action === "kidblock-off") { MOCK.kidblockEnabled = false; return { ok:true, enabled:false }; }
+    if (action === "kidblock-list") return { ok:true, domains:[...MOCK.domains] };
+    if (action === "kidblock-add") {
+        const d = String(params.domain || "").trim();
+        if (!/^([A-Za-z0-9-]+\.)+[A-Za-z]{2,}$/.test(d)) return { ok:false, error:"invalid_domain" };
+        if (!MOCK.domains.includes(d)) MOCK.domains.push(d);
+        return { ok:true };
+    }
+    if (action === "kidblock-del") {
+        MOCK.domains = MOCK.domains.filter(d => d !== params.domain);
+        return { ok:true };
+    }
+
+    return { ok:false, error:"unknown_action" };
+}
+
+function setBadge(el, text, type) {
+    el.textContent = text;
+    el.className = "badge " + (type || "");
+}
+
+async function loadMasterStatus() {
+    try {
+        const d = await api({ action: "master-status" });
+
+        const status = document.getElementById("masterStatus");
+        const onBtn = document.getElementById("masterOnBtn");
+        const offBtn = document.getElementById("masterOffBtn");
+
+        if (d.enabled) {
+            setBadge(status, "ON", "allow-green");
+            onBtn.className = "primary";
+            offBtn.className = "gray";
+        } else {
+            setBadge(status, "OFF", "red");
+            onBtn.className = "gray";
+            offBtn.className = "primary";
+        }
+    } catch (e) {
+        setBadge(document.getElementById("masterStatus"), "UNKNOWN", "orange");
+    }
+}
+
+async function masterOn() {
+    try {
+        const d = await api({ action: "master-on" });
+        if (d.ok) {
+            document.getElementById("masterMessage").textContent = "KidTime 管理已开启";
+            await loadMasterStatus();
+            await loadStatus();
+            await loadKidBlockStatus();
+        }
+    } catch (e) {
+        document.getElementById("masterMessage").textContent = "开启失败";
+    }
+}
+
+async function masterOff() {
+    try {
+        const d = await api({ action: "master-off" });
+        if (d.ok) {
+            document.getElementById("masterMessage").textContent = "KidTime 管理已暂停，设备保持联网";
+            await loadMasterStatus();
+            await loadStatus();
+            await loadKidBlockStatus();
+        }
+    } catch (e) {
+        document.getElementById("masterMessage").textContent = "暂停失败";
+    }
+}
+
+async function loadStatus() {
+    try {
+        const d = await api({ action: "status" });
+
+        document.getElementById("deviceName").textContent = d.device;
+        document.getElementById("usedTime").textContent = secondsText(d.used_seconds);
+        document.getElementById("remainingTime").textContent = secondsText(d.remaining_seconds);
+        document.getElementById("limitTime").textContent = secondsText(d.limit_seconds);
+        document.getElementById("windowTime").textContent =
+            `${d.window_start} - ${d.window_end}`;
+        document.getElementById("queryTime").textContent = d.query_time;
+
+        const activity = document.getElementById("activityBadge");
+        if (d.activity_state === "ACTIVE") {
+            setBadge(activity, "ACTIVE", "active-green");
+        } else if (d.activity_state === "IDLE") {
+            setBadge(activity, "IDLE", "");
+        } else {
+            setBadge(activity, d.activity_state || "UNKNOWN", "orange");
+        }
+
+        const access = document.getElementById("accessBadge");
+        if (d.access_state === "ALLOW") {
+            setBadge(access, "ALLOW", "allow-green");
+        } else if (d.access_state === "BLOCK") {
+            setBadge(access, "BLOCK", "red");
+        } else {
+            setBadge(access, d.access_state || "UNKNOWN", "orange");
+        }
+
+        const reason = document.getElementById("reasonBadge");
+        if (d.restriction_reason === "NONE") {
+            setBadge(reason, "NONE", "none-green");
+        } else if (d.restriction_reason === "OUT_OF_WINDOW") {
+            reason.innerHTML = "OUT_OF<br>WINDOW"; reason.className = "badge orange";
+        } else if (d.restriction_reason === "LIMIT_REACHED") {
+            reason.innerHTML = "LIMIT<br>REACHED"; reason.className = "badge red";
+        } else if (d.restriction_reason === "MANAGEMENT_OFF") {
+            reason.innerHTML = "MANAGEMENT<br>OFF"; reason.className = "badge orange";
+        } else {
+            setBadge(reason, d.restriction_reason || "UNKNOWN", "orange");
+        }
+
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function addTime(minutes) {
+    const msg = document.getElementById("addMessage");
+
+    try {
+        const d = await api({
+            action: "add-time",
+            minutes
+        });
+
+        if (d.ok) {
+            msg.textContent = `已增加 ${minutes} 分钟`;
+            await loadStatus();
+        } else {
+            msg.textContent = "加时失败：" + d.error;
+        }
+    } catch (e) {
+        msg.textContent = "加时失败";
+    }
+}
+
+function customAddTime() {
+    const n = prompt("请输入增加的分钟数：");
+    if (n === null) return;
+
+    const value = Number(n);
+
+    if (!Number.isInteger(value) || value < 1 || value > 1440) {
+        alert("请输入 1～1440 之间的整数");
+        return;
+    }
+
+    addTime(value);
+}
+
+function buildDays() {
+    const box = document.getElementById("days");
+    box.innerHTML = "";
+
+    DAYS.forEach(([key, name]) => {
+        const row = document.createElement("div");
+        row.className = "day-row";
+
+        row.innerHTML = `
+            <div class="day-name">${name}</div>
+
+            <div>
+                <div class="small">开始时间</div>
+                <input type="time" id="${key}_START">
+            </div>
+
+            <div>
+                <div class="small">结束时间</div>
+                <input type="time" id="${key}_END">
+            </div>
+
+            <div>
+                <div class="small">额度（分钟）</div>
+                <input type="number" min="1" max="1440" id="${key}_LIMIT">
+            </div>
+        `;
+
+        box.appendChild(row);
+    });
+}
+
+async function loadConfig() {
+    try {
+        const d = await api({ action: "config" });
+
+        DAYS.forEach(([key]) => {
+            document.getElementById(`${key}_START`).value = d[`${key}_START`];
+            document.getElementById(`${key}_END`).value = d[`${key}_END`];
+            document.getElementById(`${key}_LIMIT`).value = d[`${key}_LIMIT`];
+        });
+
+    } catch (e) {
+        document.getElementById("configMessage").textContent = "规则读取失败";
+    }
+}
+
+async function saveConfig() {
+    const params = { action: "save-config" };
+
+    for (const [key] of DAYS) {
+        const start = document.getElementById(`${key}_START`).value;
+        const end = document.getElementById(`${key}_END`).value;
+        const limit = document.getElementById(`${key}_LIMIT`).value;
+
+        if (!start || !end || !limit) {
+            document.getElementById("configMessage").textContent =
+                "请填写完整的七天规则";
+            return;
+        }
+
+        params[`${key}_START`] = start;
+        params[`${key}_END`] = end;
+        params[`${key}_LIMIT`] = limit;
+    }
+
+    try {
+        const d = await api(params);
+
+        if (d.ok) {
+            document.getElementById("configMessage").textContent = "规则已保存";
+            await loadConfig();
+            await loadStatus();
+        } else {
+            document.getElementById("configMessage").textContent =
+                "保存失败：" + d.error;
+        }
+    } catch (e) {
+        document.getElementById("configMessage").textContent = "保存失败";
+    }
+}
+
+async function loadKidBlockStatus() {
+    try {
+        const d = await api({ action: "kidblock-status" });
+
+        const status = document.getElementById("kidblockStatus");
+        const onBtn = document.getElementById("kidblockOnBtn");
+        const offBtn = document.getElementById("kidblockOffBtn");
+
+        if (d.enabled) {
+            status.textContent = " · ON";
+            onBtn.className = "primary";
+            offBtn.className = "gray";
+        } else {
+            status.textContent = " · OFF";
+            onBtn.className = "gray";
+            offBtn.className = "primary";
+        }
+
+    } catch (e) {
+        document.getElementById("kidblockStatus").textContent = " · UNKNOWN";
+    }
+}
+
+async function loadDomains() {
+    const box = document.getElementById("domainList");
+
+    try {
+        const d = await api({ action: "kidblock-list" });
+        box.innerHTML = "";
+
+        if (!d.domains || d.domains.length === 0) {
+            box.innerHTML = '<div class="small">暂无域名规则</div>';
+            return;
+        }
+
+        d.domains.forEach(domain => {
+            const item = document.createElement("div");
+            item.className = "domain-item";
+
+            const name = document.createElement("div");
+            name.className = "domain-name";
+            name.textContent = domain;
+
+            const btn = document.createElement("button");
+            btn.className = "danger";
+            btn.textContent = "删除";
+            btn.onclick = () => deleteDomain(domain);
+
+            item.appendChild(name);
+            item.appendChild(btn);
+            box.appendChild(item);
+        });
+
+    } catch (e) {
+        box.innerHTML = '<div class="small">域名列表读取失败</div>';
+    }
+}
+
+async function kidblockOn() {
+    try {
+        const d = await api({ action: "kidblock-on" });
+
+        if (d.ok) {
+            document.getElementById("kidblockMessage").textContent = "KidBlock 已开启";
+            await loadKidBlockStatus();
+        }
+    } catch (e) {
+        document.getElementById("kidblockMessage").textContent = "开启失败";
+    }
+}
+
+async function kidblockOff() {
+    try {
+        const d = await api({ action: "kidblock-off" });
+
+        if (d.ok) {
+            document.getElementById("kidblockMessage").textContent = "KidBlock 已关闭";
+            await loadKidBlockStatus();
+        }
+    } catch (e) {
+        document.getElementById("kidblockMessage").textContent = "关闭失败";
+    }
+}
+
+async function addDomain() {
+    const input = document.getElementById("newDomain");
+    const domain = input.value.trim();
+
+    if (!domain) return;
+
+    try {
+        const d = await api({
+            action: "kidblock-add",
+            domain
+        });
+
+        if (d.ok) {
+            input.value = "";
+            document.getElementById("kidblockMessage").textContent = "域名已添加";
+            await loadDomains();
+        } else {
+            document.getElementById("kidblockMessage").textContent =
+                "添加失败：" + d.error;
+        }
+    } catch (e) {
+        document.getElementById("kidblockMessage").textContent = "添加失败";
+    }
+}
+
+async function deleteDomain(domain) {
+    if (!confirm(`确定删除？\n\n${domain}`)) return;
+
+    try {
+        const d = await api({
+            action: "kidblock-del",
+            domain
+        });
+
+        if (d.ok) {
+            document.getElementById("kidblockMessage").textContent = "域名已删除";
+            await loadDomains();
+        }
+    } catch (e) {
+        document.getElementById("kidblockMessage").textContent = "删除失败";
+    }
+}
+
+async function init() {
+    buildDays();
+
+    await Promise.all([
+        loadMasterStatus(),
+        loadStatus(),
+        loadConfig(),
+        loadKidBlockStatus(),
+        loadDomains()
+    ]);
+
+    setInterval(loadStatus, 7000);
+}
+
+init();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,7 @@
+# Example domains for KidBlock
+# Replace or extend this list according to your own needs
+
+feedvideo.jomodns.com
+vd3.bdstatic.com
+opencdnh3.jomodns.com
+flv.liveshow.lss-user.baidubce.com

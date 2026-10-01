@@ -1,0 +1,65 @@
+#!/bin/sh
+
+CONFIG="/etc/kidmonitor/config"
+PIDFILE="/var/run/kidmonitor.pid"
+CAPTURE="/etc/kidmonitor/capture.sh"
+
+. "$CONFIG"
+
+LOG="$DATA_DIR/capture.log"
+
+case "$1" in
+    start)
+        if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+            echo "KidMonitor is already running. PID: $(cat "$PIDFILE")"
+            exit 0
+        fi
+
+		mkdir -p "$DATA_DIR" || {
+			echo "ERROR: cannot create data directory: $DATA_DIR"
+			exit 1
+		}
+
+        nohup "$CAPTURE" >>"$LOG" 2>&1 &
+        PID=$!
+        echo "$PID" > "$PIDFILE"
+        sleep 1
+
+        if kill -0 "$PID" 2>/dev/null; then
+            echo "KidMonitor: RUNNING (PID $PID)"
+        else
+            rm -f "$PIDFILE"
+            echo "ERROR: KidMonitor failed to start."
+            exit 1
+        fi
+        ;;
+
+    stop)
+        if [ -f "$PIDFILE" ]; then
+            PID="$(cat "$PIDFILE")"
+            if kill -0 "$PID" 2>/dev/null; then
+                kill "$PID"
+                sleep 1
+            fi
+            rm -f "$PIDFILE"
+        fi
+        echo "KidMonitor: STOPPED"
+        ;;
+
+    status)
+        if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+            echo "KidMonitor: RUNNING (PID $(cat "$PIDFILE"))"
+        else
+            rm -f "$PIDFILE"
+            echo "KidMonitor: STOPPED"
+        fi
+        ;;
+
+    *)
+        echo "Usage:"
+        echo "  kidmonitor start"
+        echo "  kidmonitor stop"
+        echo "  kidmonitor status"
+        exit 1
+        ;;
+esac

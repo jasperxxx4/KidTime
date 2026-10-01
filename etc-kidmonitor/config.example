@@ -1,0 +1,4 @@
+# Copy to /etc/kidmonitor/config and replace the documentation-only values.
+DEVICE_IP='192.0.2.20'
+INTERFACE='br-lan'
+DATA_DIR='/tmp/kidmonitor'

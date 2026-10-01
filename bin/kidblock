@@ -1,0 +1,125 @@
+#!/bin/sh
+
+DOMAIN_FILE="/etc/kidtime/kidblock-domains.txt"
+DISABLED_FILE="/etc/kidtime/kidblock.disabled"
+APPLY="/etc/kidtime/kidblock_dns.sh"
+
+usage() {
+    echo "Usage:"
+    echo "  kidblock on"
+    echo "  kidblock off"
+    echo "  kidblock status"
+    echo "  kidblock add <domain>"
+    echo "  kidblock del <domain>"
+    echo "  kidblock list"
+    echo "  kidblock apply"
+}
+
+valid_domain() {
+    printf '%s\n' "$1" | grep -Eq '^([A-Za-z0-9-]+\.)+[A-Za-z]{2,}$'
+}
+
+apply_rules() {
+    "$APPLY" || {
+        echo "ERROR: failed to update KidBlock rules"
+        exit 1
+    }
+
+    /etc/init.d/dnsmasq restart || {
+        echo "ERROR: failed to restart dnsmasq"
+        exit 1
+    }
+}
+
+case "$1" in
+    on)
+        rm -f "$DISABLED_FILE"
+        apply_rules
+        echo "KidBlock: ON"
+        ;;
+
+    off)
+        touch "$DISABLED_FILE"
+        nft flush set inet kidtime video4 2>/dev/null
+        echo "KidBlock: OFF"
+        ;;
+
+    status)
+        if [ -f "$DISABLED_FILE" ]; then
+            echo "KidBlock: OFF"
+        else
+            echo "KidBlock: ON"
+        fi
+        ;;
+
+    add)
+        DOMAIN="$2"
+        [ -n "$DOMAIN" ] || { usage; exit 1; }
+        valid_domain "$DOMAIN" || {
+            echo "ERROR: invalid domain: $DOMAIN" >&2
+            exit 1
+        }
+
+        touch "$DOMAIN_FILE"
+
+        if grep -Fxq "$DOMAIN" "$DOMAIN_FILE"; then
+            echo "Already blocked: $DOMAIN"
+            exit 0
+        fi
+
+        echo "$DOMAIN" >> "$DOMAIN_FILE"
+
+        if [ ! -f "$DISABLED_FILE" ]; then
+            apply_rules
+        fi
+
+        echo "Blocked: $DOMAIN"
+        ;;
+
+    del)
+        DOMAIN="$2"
+        [ -n "$DOMAIN" ] || { usage; exit 1; }
+        valid_domain "$DOMAIN" || {
+            echo "ERROR: invalid domain: $DOMAIN" >&2
+            exit 1
+        }
+
+        [ -f "$DOMAIN_FILE" ] || {
+            echo "Not found: $DOMAIN"
+            exit 0
+        }
+
+        grep -Fxv "$DOMAIN" "$DOMAIN_FILE" > "${DOMAIN_FILE}.tmp"
+        mv "${DOMAIN_FILE}.tmp" "$DOMAIN_FILE"
+
+        if [ ! -f "$DISABLED_FILE" ]; then
+            apply_rules
+        fi
+
+        echo "Unblocked: $DOMAIN"
+        ;;
+
+    list)
+        echo "KidBlock domains:"
+        if [ -s "$DOMAIN_FILE" ]; then
+            cat "$DOMAIN_FILE"
+        else
+            echo "(empty)"
+        fi
+        ;;
+
+    apply)
+        if [ -f "$DISABLED_FILE" ]; then
+            nft flush set inet kidtime video4 2>/dev/null
+            echo "KidBlock is OFF; rules not applied."
+        else
+            apply_rules
+            echo "KidBlock rules applied."
+        fi
+        ;;
+
+    *)
+        usage
+        exit 1
+        ;;
+esac
