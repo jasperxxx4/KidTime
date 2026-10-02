@@ -2,6 +2,12 @@
 
 本文件记录 KidTime 的公开版本变化。
 
+## v0.1.1
+
+- Fix Xiaomi BE6500 Router Adapter blacklist control.
+- Add required `model=0` parameter to `/api/xqnetwork/edit_device`.
+- Verified blocking and restoring for both configured 2.4 GHz and 5 GHz device MAC addresses.
+
 ## [0.1.0] - 2026-10-01
 
 首个公开 Release Candidate。
