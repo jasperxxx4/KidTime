@@ -30,6 +30,7 @@ edit_mac() {
       --max-time 15 \
       "http://${BE6500_ROUTER}/cgi-bin/luci/;stok=${TOKEN}/api/xqnetwork/edit_device" \
       --data-urlencode "mac=${MAC}" \
+      --data-urlencode "model=0" \
       --data-urlencode "option=${OPTION}"
 }
 
